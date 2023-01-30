@@ -44,14 +44,12 @@ android {
     buildTypes {
         getByName("debug") {
             isDebuggable = true
-            project.setProperty("crashlytics", false)
         }
         getByName("release") {
             isDebuggable = false
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig=signingConfigs.getByName("release")
-            project.setProperty("crashlytics", true)
         }
     }
 
@@ -70,9 +68,9 @@ android {
             buildConfigField("Boolean", "BUILT_IN_AUTO_UPDATE", "false")
             manifestPlaceholders["extractNativeLibs"] = "false"
         }
-        create("amazon") {
+        create("foss") {
             dimension = "appstore"
-            buildConfigField("Boolean", "BUILT_IN_AUTO_UPDATE", "false")
+            buildConfigField("Boolean", "BUILT_IN_AUTO_UPDATE", "true")
             manifestPlaceholders["extractNativeLibs"] = "true"
         }
     }
@@ -105,7 +103,7 @@ android {
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
-    implementation("androidx.appcompat:appcompat:1.5.1")
+    implementation("androidx.appcompat:appcompat:1.6.0")
     implementation("androidx.webkit:webkit:1.5.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
@@ -126,10 +124,11 @@ dependencies {
 
     "debugImplementation"("com.squareup.leakcanary:leakcanary-android:2.7")
 
-    if (project.property("crashlytics") == true) {
-        implementation("com.google.firebase:firebase-core:21.1.1")
-        implementation("com.google.firebase:firebase-crashlytics-ktx:18.3.2")
-    }
+    "googleImplementation"("com.google.firebase:firebase-core:21.1.1")
+    "googleImplementation"("com.google.firebase:firebase-crashlytics-ktx:18.3.3")
+
+    "genericImplementation"("com.google.firebase:firebase-core:21.1.1")
+    "genericImplementation"("com.google.firebase:firebase-crashlytics-ktx:18.3.3")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.9")
