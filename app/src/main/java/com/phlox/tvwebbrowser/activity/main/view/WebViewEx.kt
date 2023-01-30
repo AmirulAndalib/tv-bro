@@ -495,7 +495,7 @@ class WebViewEx(context: Context, val callback: Callback, val jsInterface: Andro
     override fun loadUrl(url: String) {
         when {
             Config.DEFAULT_HOME_URL == url -> {
-                val data = context.assets.open("pages/new-tab.html").bufferedReader().use { it.readText() }
+                val data = context.assets.open("pages/home/index.html").bufferedReader().use { it.readText() }
                 loadDataWithBaseURL("file:///android_asset/", data, "text/html", "UTF-8", null)
             }
             url.startsWith(INTERNAL_SCHEME) -> {

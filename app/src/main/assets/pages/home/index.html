@@ -6,11 +6,11 @@
     <style>
         body {
             color:#343a3c;
-            background-color:#ffffff;
+            background-color:#EDF6FF;
         }
 
         #suggestions {
-            width:75%;
+            width:64%;
             margin: auto;
             table-layout:fixed;
             outline:none;
@@ -25,46 +25,59 @@
         }
 
         .sugg {
-            padding: 17px 7px;
+            padding: 17px 27px;
             white-space: nowrap;
-            //background-image: linear-gradient(to bottom, #ffffff, #ffffff);
-            //border-style: solid;
-            //border-width: 1px;
-            //border-color: #cccccc;
             word-wrap: break-word;
             font-size: 1.6em;
             transition:.5s;
+            background: #FFFFFF;
+            box-shadow: 0px 1px 12px rgba(134, 192, 255, 0.16);
+            border: 2px solid #FFFFFF;
+            border-radius: 12px;
         }
         .sugg:hover {
             transition:.5s;
-            background-color: #eeeeee;
+            background: #F3F6FA;
+            border: 2px solid #A5D0FF;
+            border-radius: 12px;
         }
         .sugg:hover > div:nth-child(2) {
-            //color: #6666aa;
-            //font-size: 1.8em;
+            color: #6666aa;
          }
-        .sugg > img {
-            width: 32px;
-            height: 32px;
+        .sugg-ico {
+            width: 64px;
+            float: left;
         }
         .sugg-title {
-            display: inline-block;
+            display: block;
             max-width: 90%;
-            margin-left: 5px;
+            margin-left: 88px;
+            color: #4F4F4F;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 600;
+            font-size: 24px;
+            line-height: 177.02%;
         }
         .ellipsize, .sugg-title, .sugg-desk{
             text-overflow: ellipsis;
             overflow: hidden;
         }
         .sugg-desk {
-            color: #888;
-            font-size: 0.8em!important;
+            display: block;
+            color: #BDBDBD;
+            margin-left: 88px;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 400;
+            font-size: 18px;
+            line-height: 177.02%;
         }
     </style>
 </head>
 <body>
 <div style="height: 100%; width: 100%; position: fixed; left: 0; top: 0; overflow-x: hidden;">
-    <table cellspacing="10" id="suggestions">
+    <table cellspacing="32" id="suggestions">
 
     </table>
 </div>
@@ -85,9 +98,14 @@ function renderSuggestions() {
         {"title": "Twitch", "url":"https://www.twitch.tv"},
         {"title": "Amazon", "url":"https://www.amazon.com"},
         {"title": "BBC", "url":"https://www.bbc.com"}];
-    var suggsStr = TVBro.suggestions();
-    suggs = JSON.parse(suggsStr);
-    //suggs = [{"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://googlewerqwerqwerwqerqwerdfasdfaserfwsderfwerqwerqwerwqdfasdfawsefWEFefWEFwaefAWSF.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}];
+    if (window.hasOwnProperty( "TVBro" )) {
+        var suggsStr = TVBro.suggestions();
+        suggs = JSON.parse(suggsStr);
+    } else {
+        suggs = [];
+        //suggs = [{"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://googlewerqwerqwerwqerqwerdfasdfaserfwsderfwerqwerqwerwqdfasdfawsefWEFefWEFwaefAWSF.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}];
+    }
+    
     var i = 0;
     while (suggs.length < 8) {
         suggs.push(recommendations[i++]);
@@ -95,7 +113,12 @@ function renderSuggestions() {
     suggs.map(function(c, i, arr){
         if (!c.favicon) {
             const url = new URL(c.url);
-            c.favicon = url.origin + "/favicon.ico";
+            if (window.hasOwnProperty( "TVBro" )) {
+                c.favicon = TVBro.resolveFavicon(url);
+            } else {
+                c.favicon = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=" + url.origin;
+            }
+            //c.favicon = url.origin + "/favicon.ico";
         }
         return c;
     })
@@ -104,7 +127,7 @@ function renderSuggestions() {
     for (var i = 0; i < suggs.length; i++) {
         if (!(i % 2)) html += '<tr>';
         html += '<td onclick="onSuggestionClicked(' + i + ');"><div class="sugg" style="margin-left: 0;">'+
-            '<img src="' + suggs[i].favicon + '" onerror="onfavloaderror(this);" /><div class="sugg-title">' +
+            '<img class="sugg-ico" src="' + suggs[i].favicon + '" onerror="onfavloaderror(this);" onload="onFavLoad(this)" /><div class="sugg-title">' +
             suggs[i].title + '</div><div class="sugg-desk">' + escapeHTML(suggs[i].url) + '</div></div></td>';
         if ((i % 2) || i == (suggs.length - 1)) html += '</tr>';
     }
@@ -112,9 +135,17 @@ function renderSuggestions() {
     container.style.top = window.innerHeight / 2 - container.clientHeight / 2 + "px";
 }
 
+function onFavLoad(source) {
+    console.log(source);
+}
+
 function onfavloaderror(source) {
-    //source.src = 'ic_web.png';
-    source.src = 'file:///android_asset/pages/ic_web.png';
+    //if (source.src.includes("https://t2.gstatic.com")) {
+    //    source.src = source.src.split("domain=")[1] + "/favicon.ico";
+    //} else {
+        source.src = 'ic_web.png';
+    //}
+    //source.src = 'file:///android_asset/pages/ic_web.png';
     return true;
 }
 

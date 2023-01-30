@@ -86,6 +86,12 @@ android {
         targetCompatibility to JavaVersion.VERSION_1_8
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     lint.disable += setOf("UNUSED_PARAMETER")
 
     kapt {
@@ -124,6 +130,9 @@ dependencies {
         implementation("com.google.firebase:firebase-core:21.1.1")
         implementation("com.google.firebase:firebase-crashlytics-ktx:18.3.2")
     }
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.9")
 }
 
 tasks.getByName("check").dependsOn("lint")
