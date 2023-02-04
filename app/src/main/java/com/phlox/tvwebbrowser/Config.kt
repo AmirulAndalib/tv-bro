@@ -20,19 +20,25 @@ class Config(val prefs: SharedPreferences) {
         const val KEEP_SCREEN_ON_KEY = "keep_screen_on"
         const val INCOGNITO_MODE_KEY = "incognito_mode"
         const val INCOGNITO_MODE_HINT_SUPPRESS_KEY = "incognito_mode_hint_suppress"
+        const val HOME_PAGE_MODE = "home_page_mode"
+        const val HOME_PAGE_SUGGESTIONS_MODE = "home_page_suggestions_mode"
     }
 
     enum class Theme {
         SYSTEM, WHITE, BLACK
     }
 
+    enum class HomePageMode {
+        HOME_PAGE, SEARCH_ENGINE, CUSTOM, BLANK
+    }
+
+    enum class HomePageLinksMode {
+        MIXED, RECOMMENDATIONS, BOOKMARKS, LATEST_HISTORY, MOST_VISITED
+    }
+
     fun getSearchEngineURL(): String {
         return prefs.getString(SEARCH_ENGINE_URL_PREF_KEY, "")!!
     }
-
-    fun getSearchEngineAsHomePage() = prefs.getBoolean(SEARCH_ENGINE_AS_HOME_PAGE_KEY, false)
-
-    fun getHomePage() = prefs.getString(HOME_PAGE_KEY, DEFAULT_HOME_URL)!!
 
     fun getUserAgentString(): String {
         return prefs.getString(USER_AGENT_PREF_KEY, "")!!
@@ -77,16 +83,37 @@ class Config(val prefs: SharedPreferences) {
             }
         }
 
+    var homePageMode: HomePageMode
+        get() = prefs.getInt(HOME_PAGE_MODE, 0)
+            .let {
+                //ignore value if search engine as home page is set
+                if (prefs.getBoolean(SEARCH_ENGINE_AS_HOME_PAGE_KEY, false)) {
+                    prefs.edit().remove(SEARCH_ENGINE_AS_HOME_PAGE_KEY).apply()
+                    HomePageMode.SEARCH_ENGINE.ordinal
+                } else it
+            }
+            .let { if (it < 0 || it >= HomePageMode.values().size) 0 else it }
+            .let { HomePageMode.values()[it] }
+        set(value) {
+            prefs.edit().putInt(HOME_PAGE_MODE, value.ordinal).apply()
+        }
+
+    var homePageLinksMode: HomePageLinksMode
+        get() = prefs.getInt(HOME_PAGE_SUGGESTIONS_MODE, 0)
+            .let { if (it < 0 || it >= HomePageLinksMode.values().size) 0 else it }
+            .let { HomePageLinksMode.values()[it] }
+        set(value) {
+            prefs.edit().putInt(HOME_PAGE_SUGGESTIONS_MODE, value.ordinal).apply()
+        }
+
+    var homePage: String
+        get() = prefs.getString(HOME_PAGE_KEY, DEFAULT_HOME_URL)!!
+        set(value) {
+            prefs.edit().putString(HOME_PAGE_KEY, value).apply()
+        }
+
     fun setSearchEngineURL(url: String) {
         prefs.edit().putString(SEARCH_ENGINE_URL_PREF_KEY, url).apply()
-    }
-
-    fun setSearchEngineAsHomePage(searchEngineIsHomePage: Boolean) {
-        prefs.edit().putBoolean(SEARCH_ENGINE_AS_HOME_PAGE_KEY, searchEngineIsHomePage).apply()
-    }
-
-    fun setHomePage(url: String) {
-        prefs.edit().putString(HOME_PAGE_KEY, url).apply()
     }
 
     fun setUserAgentString(uas: String) {

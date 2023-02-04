@@ -30,6 +30,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.phlox.tvwebbrowser.Config
 import com.phlox.tvwebbrowser.R
+import com.phlox.tvwebbrowser.TVBro
 import com.phlox.tvwebbrowser.model.AndroidJSInterface
 import com.phlox.tvwebbrowser.utils.LogUtils
 import java.net.URLEncoder
@@ -495,8 +496,17 @@ class WebViewEx(context: Context, val callback: Callback, val jsInterface: Andro
     override fun loadUrl(url: String) {
         when {
             Config.DEFAULT_HOME_URL == url -> {
-                val data = context.assets.open("pages/home/index.html").bufferedReader().use { it.readText() }
-                loadDataWithBaseURL("file:///android_asset/", data, "text/html", "UTF-8", null)
+                when (TVBro.config.homePageMode) {
+                    Config.HomePageMode.BLANK -> {
+                        loadDataWithBaseURL(null, "", "text/html", "UTF-8", null)
+                    }
+                    Config.HomePageMode.CUSTOM, Config.HomePageMode.SEARCH_ENGINE -> super.loadUrl(TVBro.config.homePage)
+                    Config.HomePageMode.HOME_PAGE -> {
+                        val data = context.assets.open("pages/home/index.html").bufferedReader().use { it.readText() }
+                        loadDataWithBaseURL("http://phlox.dev/tvbro/home/", data, "text/html", "UTF-8", null)
+                    }
+                }
+
             }
             url.startsWith(INTERNAL_SCHEME) -> {
                 val uri = Uri.parse(url)

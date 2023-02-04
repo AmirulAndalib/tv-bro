@@ -2,6 +2,7 @@ package com.phlox.tvwebbrowser.model.dao
 
 import androidx.room.*
 import com.phlox.tvwebbrowser.model.FavoriteItem
+import com.phlox.tvwebbrowser.model.HistoryItem
 
 @Dao
 interface FavoritesDao {
@@ -16,4 +17,7 @@ interface FavoritesDao {
 
     @Delete
     suspend fun delete(item: FavoriteItem)
+
+    @Query("SELECT * FROM favorites WHERE parent=0 ORDER BY id DESC LIMIT :limit")
+    suspend fun first(limit: Int = 1): List<FavoriteItem>
 }

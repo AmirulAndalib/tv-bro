@@ -33,8 +33,9 @@ class SettingsModel : ActiveModel() {
             "https://yandex.com/search/?text=[query]", "")
     var searchEngineURL = ObservableValue(config.getSearchEngineURL())
     //Home page settings
-    var setSearchEngineAsHomePage: Boolean = config.getSearchEngineAsHomePage()
-    var homePage = ObservableValue(config.getHomePage())
+    var homePage by config::homePage
+    var homePageMode by config::homePageMode
+    var homePageLinksMode by config::homePageLinksMode
     //User agent strings configuration
     val userAgentStringTitles = arrayOf("TV Bro", "Chrome (Desktop)", "Chrome (Mobile)", "Chrome (Tablet)", "Firefox (Desktop)", "Firefox (Tablet)", "Edge (Desktop)", "Safari (Desktop)", "Safari (iPad)", "Apple TV", "Custom")
     val uaStrings = listOf("",
@@ -75,22 +76,34 @@ class SettingsModel : ActiveModel() {
         updateChannel = config.getUpdateChannel()
     }
 
-    fun changeSearchEngineUrl(url: String) {
+    fun setSearchEngineURL(url: String) {
         config.setSearchEngineURL(url)
         searchEngineURL.value = url
+        if (homePageMode == Config.HomePageMode.SEARCH_ENGINE) {
+            updateHomeAsSearchEngine(url)
+        }
     }
 
-    fun setSearchEngineAsHomePage(searchEngineIsHomePage: Boolean, url: String) {
-        if (searchEngineIsHomePage) {
-            // Regex for base url parsing
-            val regexForUrl = """^https?:\/\/[^#?\/]+""".toRegex()
-            homePage.value = regexForUrl.find(url)?.value ?: Config.DEFAULT_HOME_URL
-        } else {
-            homePage.value = Config.DEFAULT_HOME_URL
+    private fun updateHomeAsSearchEngine(url: String) {
+        val regexForUrl = """^https?://[^#?/]+""".toRegex()
+        val homePageUrl = regexForUrl.find(url)?.value ?: Config.DEFAULT_HOME_URL
+        homePage = homePageUrl
+    }
+
+    fun setHomePageProperties(homePageMode: Config.HomePageMode, customHomePageUrl: String?, homePageLinksMode: Config.HomePageLinksMode) {
+        this.homePageMode = homePageMode
+        this.homePageLinksMode = homePageLinksMode
+        when (homePageMode) {
+            Config.HomePageMode.SEARCH_ENGINE -> {
+                updateHomeAsSearchEngine(searchEngineURL.value)
+            }
+            Config.HomePageMode.HOME_PAGE, Config.HomePageMode.BLANK -> {
+                homePage = Config.DEFAULT_HOME_URL
+            }
+            Config.HomePageMode.CUSTOM -> {
+                homePage = customHomePageUrl ?: Config.DEFAULT_HOME_URL
+            }
         }
-        config.setSearchEngineAsHomePage(searchEngineIsHomePage)
-        setSearchEngineAsHomePage = searchEngineIsHomePage
-        config.setHomePage(homePage.value)
     }
 
     fun saveUAString(uas: String) {

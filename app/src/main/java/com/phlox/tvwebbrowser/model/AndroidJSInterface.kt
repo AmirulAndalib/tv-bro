@@ -3,6 +3,7 @@ package com.phlox.tvwebbrowser.model
 import android.content.Context
 import android.net.http.SslError
 import android.webkit.JavascriptInterface
+import com.phlox.tvwebbrowser.Config
 import com.phlox.tvwebbrowser.R
 import com.phlox.tvwebbrowser.TVBro
 import com.phlox.tvwebbrowser.activity.main.MainActivity
@@ -56,8 +57,21 @@ class AndroidJSInterface(private val mainActivityViewModel: MainActivityViewMode
     }
 
     @JavascriptInterface
-    fun suggestions(): String {
+    fun homePageLinks(): String {
+        val url = tabsModel.currentTab.value?.url ?: return "[]"
+        if (url != Config.DEFAULT_HOME_URL) return "[]"
         return suggestions
+    }
+
+    @JavascriptInterface
+    fun homePageLinksMode(): String {
+        return TVBro.config.homePageLinksMode.name
+    }
+
+    @JavascriptInterface
+    fun resolveFavicon(url: String): String? {
+        //TODO: implement
+        return null
     }
 
     @JavascriptInterface
@@ -89,16 +103,10 @@ class AndroidJSInterface(private val mainActivityViewModel: MainActivityViewMode
     }
 
     @Throws(JSONException::class)
-    fun setSuggestions(context: Context, frequentlyUsedURLs: List<HistoryItem>) {
+    fun setHomePageLinks(frequentlyUsedURLs: List<HomePageLink>) {
         val jsArr = JSONArray()
         for (item in frequentlyUsedURLs) {
-            val jsObj = JSONObject()
-            jsObj.put("url", item.url)
-            jsObj.put("title", item.title)
-            if (item.favicon != null) {
-                jsObj.put("favicon", "file:///" + context.cacheDir.absolutePath + "/favicons/" + item.favicon)
-            }
-            jsArr.put(jsObj)
+            jsArr.put(item.toJsonObj())
         }
         suggestions = jsArr.toString()
     }

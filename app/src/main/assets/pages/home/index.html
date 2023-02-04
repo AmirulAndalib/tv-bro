@@ -77,18 +77,31 @@
 </head>
 <body>
 <div style="height: 100%; width: 100%; position: fixed; left: 0; top: 0; overflow-x: hidden;">
-    <table cellspacing="32" id="suggestions">
+    <table cellspacing="32" id="suggestions" style="top: 150px;">
 
     </table>
 </div>
 <script>
-function onSuggestionClicked(index) {
-    TVBro.navigate(suggs[index].url);
+function onSuggestionClicked(url) {
+    window.location.href = url;
 }
 
-var suggs = undefined;
-function renderSuggestions() {
-    if (suggs) return;
+const getCountryCode = async () => {
+    var country = localStorage.getItem("country");
+    if (country !== null) return country;
+    try {
+        let response = await fetch('http://ip-api.com/json/');
+        const data = await response.json();
+        country = data.countryCode;
+        localStorage.setItem("country", country);
+        return country;
+    } catch (error) {
+        console.log(error);
+        return "";
+    }
+};
+
+function loadRecommendations() {
     var recommendations = [
         {"title": "YouTube", "url":"https://www.youtube.com"},
         {"title": "Facebook", "url":"https://www.facebook.com"},
@@ -97,25 +110,61 @@ function renderSuggestions() {
         {"title": "Instagram", "url":"https://www.instagram.com"},
         {"title": "Twitch", "url":"https://www.twitch.tv"},
         {"title": "Amazon", "url":"https://www.amazon.com"},
-        {"title": "BBC", "url":"https://www.bbc.com"}];
-    if (window.hasOwnProperty( "TVBro" )) {
-        var suggsStr = TVBro.suggestions();
-        suggs = JSON.parse(suggsStr);
+        {"title": "BBCC", "url":"https://www.bbc.com"}];
+    var saved = localStorage.getItem("saved_recommendations");
+    var savedTime = localStorage.getItem("saved_recommendations_time");
+    //check if saved recommendations are not older than 1 month
+    var month = 30 * 24 * 60 * 60 * 1000;
+    if (saved && savedTime && (new Date().getTime() - savedTime) < month) {
+        recommendations = JSON.parse(saved);
     } else {
-        suggs = [];
-        //suggs = [{"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://googlewerqwerqwerwqerqwerdfasdfaserfwsderfwerqwerqwerwqdfasdfawsefWEFefWEFwaefAWSF.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}, {"title": "test", "url":"http://google.com"}];
+        getCountryCode().then(function(country) {
+            var url = "recommendations/" + country + ".json";
+            fetch(url).then(function(response) {
+                return response.json();
+            }).then(function(data) {
+                recommendations = data;
+                localStorage.setItem("saved_recommendations", JSON.stringify(recommendations));
+                localStorage.setItem("saved_recommendations_time", new Date().getTime());
+            });
+        });
     }
-    
-    var i = 0;
-    while (suggs.length < 8) {
-        suggs.push(recommendations[i++]);
+    return recommendations;
+}
+
+function renderLinks() {
+    var recommendationsToDisplay = [];
+
+    var homePageLinksMode = "recommendations";
+    if (window.hasOwnProperty( "TVBro" )) {
+        homePageLinksMode = TVBro.homePageLinksMode();
+        switch (homePageLinksMode) {
+            case "RECOMMENDATIONS":
+                recommendationsToDisplay = loadRecommendations();
+                break;
+            case "BOOKMARKS": case "LATEST_HISTORY": case "MOST_VISITED":
+                recommendationsToDisplay = JSON.parse(TVBro.homePageLinks());
+                break;
+            case "MIXED": default:
+                var recommendations = loadRecommendations();
+                var recommendationsToDisplay = JSON.parse(TVBro.homePageLinks());
+                var i = 0;
+                while (recommendationsToDisplay.length < 8) {
+                    recommendationsToDisplay.push(recommendations[i++]);
+                }
+                break;
+        }
+    } else {
+        recommendationsToDisplay = loadRecommendations();
     }
-    suggs.map(function(c, i, arr){
+
+    recommendationsToDisplay.map(function(c, i, arr) {
         if (!c.favicon) {
             const url = new URL(c.url);
             if (window.hasOwnProperty( "TVBro" )) {
-                c.favicon = TVBro.resolveFavicon(url);
-            } else {
+                c.favicon = TVBro.resolveFavicon(c.url);
+            }
+            if (!c.favicon) {
                 c.favicon = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=" + url.origin;
             }
             //c.favicon = url.origin + "/favicon.ico";
@@ -124,15 +173,15 @@ function renderSuggestions() {
     })
     var container = document.getElementById('suggestions');
     var html = "";
-    for (var i = 0; i < suggs.length; i++) {
+    for (var i = 0; i < recommendationsToDisplay.length; i++) {
         if (!(i % 2)) html += '<tr>';
-        html += '<td onclick="onSuggestionClicked(' + i + ');"><div class="sugg" style="margin-left: 0;">'+
-            '<img class="sugg-ico" src="' + suggs[i].favicon + '" onerror="onfavloaderror(this);" onload="onFavLoad(this)" /><div class="sugg-title">' +
-            suggs[i].title + '</div><div class="sugg-desk">' + escapeHTML(suggs[i].url) + '</div></div></td>';
-        if ((i % 2) || i == (suggs.length - 1)) html += '</tr>';
+        html += '<td onclick="onSuggestionClicked(' + escapeHTML(recommendationsToDisplay[i].url) + ');"><div class="sugg" style="margin-left: 0;">'+
+            '<img class="sugg-ico" src="' + recommendationsToDisplay[i].favicon + '" onerror="onfavloaderror(this);" onload="onFavLoad(this)" /><div class="sugg-title">' +
+            recommendationsToDisplay[i].title + '</div><div class="sugg-desk">' + escapeHTML(recommendationsToDisplay[i].url) + '</div></div></td>';
+        if ((i % 2) || i == (recommendationsToDisplay.length - 1)) html += '</tr>';
     }
     container.innerHTML = html;
-    container.style.top = window.innerHeight / 2 - container.clientHeight / 2 + "px";
+    //container.style.top = window.innerHeight / 2 - container.clientHeight / 2 + "px";
 }
 
 function onFavLoad(source) {
@@ -155,7 +204,7 @@ function escapeHTML(html) {
     return escape.innerHTML;
 }
 
-renderSuggestions();
+renderLinks();
 </script>
 </body>
 </html>

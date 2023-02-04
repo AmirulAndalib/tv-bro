@@ -66,7 +66,7 @@ object SearchEngineConfigDialogFactory {
                 .setTitle(R.string.engine)
                 .setPositiveButton(R.string.save) { dialog, which ->
                     val url = etUrl.text.toString()
-                    settings.changeSearchEngineUrl(url)
+                    settings.setSearchEngineURL(url)
                     callback.onDone(url)
                 }
                 .show()

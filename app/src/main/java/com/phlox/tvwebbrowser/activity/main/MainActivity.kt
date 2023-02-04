@@ -26,6 +26,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.phlox.tvwebbrowser.Config
 import com.phlox.tvwebbrowser.R
 import com.phlox.tvwebbrowser.TVBro
 import com.phlox.tvwebbrowser.activity.IncognitoModeMainActivity
@@ -131,7 +132,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
 
         vb.ibAdBlock.setOnClickListener { toggleAdBlockForTab() }
         vb.ibPopupBlock.setOnClickListener { lifecycleScope.launch(Dispatchers.Main) { showPopupBlockOptions() } }
-        vb.ibHome.setOnClickListener { navigate(settingsModel.homePage.value) }
+        vb.ibHome.setOnClickListener { navigate(settingsModel.homePage) }
         vb.ibBack.setOnClickListener { navigateBack() }
         vb.ibForward.setOnClickListener {
             if (tabsModel.currentTab.value != null && (tabsModel.currentTab.value!!.webView?.canGoForward() == true)) {
@@ -194,8 +195,12 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
             }
         }
 
-        viewModel.frequentlyUsedUrls.subscribe(this) {
-            jsInterface.setSuggestions(application, it)
+        viewModel.homePageLinks.subscribe(this) {
+            jsInterface.setHomePageLinks(it)
+            val currentUrl = tabsModel.currentTab.value?.url ?: return@subscribe
+            if (Config.DEFAULT_HOME_URL == currentUrl) {
+                tabsModel.currentTab.value?.webView?.loadUrl("javascript:renderLinks()")
+            }
         }
 
         tabsModel.currentTab.subscribe(this) {
@@ -258,7 +263,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
         }
 
         override fun onAddNewTabSelected() {
-            openInNewTab(settingsModel.homePage.value, tabsModel.tabsStates.size)
+            openInNewTab(settingsModel.homePage, tabsModel.tabsStates.size)
         }
 
         override fun closeTab(tabState: WebTabState?) = this@MainActivity.closeTab(tabState)
@@ -357,7 +362,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
         if (tabsModel.currentTab.value != null && tabsModel.currentTab.value!!.webView?.canGoBack() == true) {
             tabsModel.currentTab.value!!.webView?.goBack()
         } else if (goHomeIfNoHistory) {
-            navigate(settingsModel.homePage.value)
+            navigate(settingsModel.homePage)
         } else if (vb.rlActionBar.visibility != View.VISIBLE) {
             showMenuOverlay()
         } else {
@@ -405,7 +410,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
         val intentUri = intent.data
         if (intentUri == null) {
             if (tabsModel.tabsStates.isEmpty()) {
-                openInNewTab(settingsModel.homePage.value)
+                openInNewTab(settingsModel.homePage)
             } else {
                 var foundSelectedTab = false
                 for (i in tabsModel.tabsStates.indices) {
@@ -441,7 +446,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
                     })
         } else {
             val currentTab = tabsModel.currentTab.value
-            if (currentTab == null || currentTab.url == settingsModel.homePage.value) {
+            if (currentTab == null || currentTab.url == settingsModel.homePage) {
                 showMenuOverlay()
             }
             if (settingsModel.needAutoCheckUpdates &&
@@ -491,7 +496,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
         }
         tab.webView?.apply { vb.flWebViewContainer.removeView(this) }
         when {
-            tabsModel.tabsStates.size == 1 -> openInNewTab(settingsModel.homePage.value, 0)
+            tabsModel.tabsStates.size == 1 -> openInNewTab(settingsModel.homePage, 0)
 
             position > 0 -> changeTab(tabsModel.tabsStates[position - 1])
 
@@ -931,7 +936,7 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
     private fun syncTabWithTitles() {
         val tab = tabByTitleIndex(vb.vTabs.current)
         if (tab == null) {
-            openInNewTab(settingsModel.homePage.value, if (vb.vTabs.current < 0) 0 else tabsModel.tabsStates.size)
+            openInNewTab(settingsModel.homePage, if (vb.vTabs.current < 0) 0 else tabsModel.tabsStates.size)
         } else if (!tab.selected) {
             changeTab(tab)
         }
@@ -1122,8 +1127,12 @@ open class MainActivity : AppCompatActivity(), ActionBar.Callback {
 
             tab.webView?.evaluateJavascript(Scripts.INITIAL_SCRIPT, null)
             tab.webPageInteractionDetected = false
-            if (settingsModel.homePage.value == url) {
-                tab.webView?.loadUrl("javascript:renderSuggestions()")
+
+            if (tab.url == Config.DEFAULT_HOME_URL &&
+                config.homePageMode == Config.HomePageMode.HOME_PAGE) {
+                lifecycleScope.launch {
+                    viewModel.loadHomePageLinks()
+                }
             }
         }
 
